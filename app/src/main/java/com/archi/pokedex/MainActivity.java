@@ -1,5 +1,6 @@
 package com.archi.pokedex;
 
+import android.content.Intent;
 import android.support.v7.app.AppCompatActivity;
 import android.os.Bundle;
 import android.util.Log;
@@ -25,24 +26,47 @@ import okhttp3.Response;
 public class MainActivity extends AppCompatActivity {
 
     ImageView image;
-    TextView height,id,name;
+    TextView name;
     Button next,previous,btn;
     int count =1;
+    String frontUrl = "https://pokeapi.co/api/v2/pokemon-form/";
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
-
+        next = findViewById(R.id.next);
+        previous = findViewById(R.id.prev);
         btn =findViewById(R.id.btn);
-
+        image = findViewById(R.id.image);
+        name = findViewById(R.id.name);
         btn.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View view) {
-                NetworkCall("https://pokeapi.co/api/v2/pokemon/"+count+"/");
+                call(frontUrl,count);
             }
         });
 
+        next.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View view) {
+                count+=1;
+                call(frontUrl,count);
+            }
+        });
+
+        previous.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View view) {
+                count-=1;
+                call(frontUrl,count);
+            }
+        });
+
+    }
+    public void call(String url,int count)
+    {
+        NetworkCall(url+count+"/");
     }
 
 
@@ -63,20 +87,23 @@ public class MainActivity extends AppCompatActivity {
             public void onResponse(Call call, Response response) throws IOException {
 
                 String result = response.body().string();
-                final Pokemon pokemon = parseJson(result);
+                final PokemonFront pokemon = parseJson(result);
 
                 MainActivity.this.runOnUiThread(new Runnable() {
                     @Override
                     public void run() {
-                        image = findViewById(R.id.image);
-                        name = findViewById(R.id.name);
-                        id = findViewById(R.id.id);
-                        height = findViewById(R.id.height);
 
                         Picasso.get().load(pokemon.getImage()).into(image);
                         name.setText(pokemon.getName());
-                        id.setText(String.valueOf(pokemon.getId()));
-                        height.setText(String.valueOf(pokemon.getHeight()));
+                        image.setOnClickListener(new View.OnClickListener() {
+                            @Override
+                            public void onClick(View view) {
+                                Intent intent = new Intent(getApplicationContext(),Activity2.class);
+                                intent.putExtra("url",pokemon.getUrl());
+                                intent.putExtra("count",count);
+                                startActivity(intent);
+                            }
+                        });
                     }
                 });
             }
@@ -86,25 +113,24 @@ public class MainActivity extends AppCompatActivity {
     }
 
 
-    public Pokemon parseJson(String s)
+    public PokemonFront parseJson(String s)
     {
         try {
             JSONObject root = new JSONObject(s);
-            int height = root.getInt("height");
             int id = root.getInt("id");
-            JSONArray array = root.getJSONArray("forms");
-            JSONObject jsonObject = array.getJSONObject(0);
-             String name =jsonObject.getString("name");
+            JSONObject pokemon = root.getJSONObject("pokemon");
+            String name =pokemon.getString("name");
+            String url = pokemon.getString("url");
             String image = root.getJSONObject("sprites").getString("front_default");
-            Pokemon pokemon = new Pokemon(image,name,height,id);
+            PokemonFront pokFront = new PokemonFront(name,url,id,image);
             Log.d("Parsing", "object created");
-            return pokemon;
+            return pokFront;
 
         } catch (JSONException e) {
             e.printStackTrace();
         }
 
         Log.d("PARSING", "some kind of error ");
-        return new Pokemon();
+        return new PokemonFront();
     }
 }
