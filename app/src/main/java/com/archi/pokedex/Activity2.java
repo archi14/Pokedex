@@ -16,8 +16,6 @@ public class Activity2 extends AppCompatActivity {
         Bundle bundle = getIntent().getExtras();
         String url =bundle.getString("url");
         String Image = bundle.getString("image");
-        int count = bundle.getInt("count");
-        String name = bundle.getString("name");
         image = findViewById(R.id.image);
         Picasso.get().load(Image).into(image);
 

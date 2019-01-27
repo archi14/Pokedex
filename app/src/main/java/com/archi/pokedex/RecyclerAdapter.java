@@ -1,6 +1,8 @@
 package com.archi.pokedex;
 
 import android.content.Context;
+import android.content.Intent;
+import android.os.Bundle;
 import android.support.annotation.NonNull;
 import android.support.v7.widget.RecyclerView;
 import android.support.v7.widget.RecyclerView.Adapter;
@@ -31,9 +33,20 @@ public class RecyclerAdapter extends Adapter<RecyclerAdapter.RecyclerViewHolder>
 
     @Override
     public void onBindViewHolder(@NonNull RecyclerViewHolder holder, int position) {
-        PokemonFront pokemonFront = pokemonFronts.get(position);
+        final PokemonFront pokemonFront = pokemonFronts.get(position);
         Picasso.get().load(pokemonFront.getImage()).into(holder.image);
         holder.name.setText(pokemonFront.getName());
+        holder.image.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View view) {
+                Intent intent = new Intent(context,Activity2.class);
+                Bundle bundle = new Bundle();
+                bundle.putString("url",pokemonFront.getUrl());
+                bundle.putString("image",pokemonFront.getImage());
+                intent.putExtras(bundle);
+                context.startActivity(intent);
+            }
+        });
     }
 
 
