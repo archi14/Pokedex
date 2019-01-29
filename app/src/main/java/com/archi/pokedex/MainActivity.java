@@ -1,107 +1,81 @@
 package com.archi.pokedex;
 
-import android.os.AsyncTask;
 import android.support.v7.app.AppCompatActivity;
 import android.os.Bundle;
 import android.support.v7.widget.GridLayoutManager;
 import android.support.v7.widget.RecyclerView;
 import android.util.Log;
-import android.widget.ImageView;
-
 import org.json.JSONException;
 import org.json.JSONObject;
-
-import java.io.IOException;
 import java.util.ArrayList;
-
-import okhttp3.Call;
-import okhttp3.Callback;
-import okhttp3.OkHttpClient;
-import okhttp3.Request;
-import okhttp3.Response;
+import retrofit2.Retrofit;
+import retrofit2.converter.gson.GsonConverterFactory;
 
 public class MainActivity extends AppCompatActivity {
 
-    int count =1;
-    int TotalCount =200;
-    ArrayList<PokemonFront> pokemonFronts;
-    String frontUrl = "https://pokeapi.co/api/v2/pokemon-form/";
-    RecyclerAdapter recyclerAdapter;
     RecyclerView recyclerView;
-    ImageView image1;
+    RecyclerAdapter recyclerAdapter;
+    ArrayList<MyPojo> list;
+    ArrayList<PokemonFront> pokelist;
+    public static final String baseurl ="https://pokeapi.co/api/v2/";
+    private static Retrofit retrofit=null;
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
-        recyclerView = findViewById(R.id.view);
-        pokemonFronts = new ArrayList<>();
-        call(frontUrl,count);
+        //image = findViewById(R.id.image);
+        recyclerView  = findViewById(R.id.view);
+        pokelist = new ArrayList<>();
+        list = new ArrayList<>();
+        for(int i=1;i<800;i++)
+        {
+            getData(i);
+        }
+
+        Log.d("on", String.valueOf(list.size()));
 
     }
 
-    public void call(String url,int count)
+    public void getData(int index)
     {
-        NetworkCall(url+count+"/");
-    }
+        if(retrofit==null)
+        {
+            retrofit = new Retrofit.Builder().baseUrl(baseurl).addConverterFactory(GsonConverterFactory.create()).build();
 
+        }
 
-   public void NetworkCall(final String url)
-    {
-        OkHttpClient client = new OkHttpClient();
-        Request request = new Request.Builder()
-                            .url(url)
-                            .build();
+        final PokeApiSource pokeApiSource =retrofit.create(PokeApiSource.class);
+        retrofit2.Call<MyPojo> call = pokeApiSource.getImage(String.valueOf(index));
 
-        client.newCall(request).enqueue(new Callback() {
+        call.enqueue(new retrofit2.Callback<MyPojo>() {
             @Override
-            public void onFailure(Call call, IOException e) {
+            public void onResponse(retrofit2.Call<MyPojo> call, retrofit2.Response<MyPojo> response) {
+                MyPojo myPojo = response.body();
+                list.add(myPojo);
+                if(myPojo!=null)
+                {
+                    pokelist.add(new PokemonFront(myPojo.getName()," ", Integer.valueOf(myPojo.getId()),myPojo.getSprites().getFront_default()));
+                }
+
+                Log.d("on", String.valueOf(pokelist.size()));
+                if(pokelist.size()<=1)
+                {
+                    recyclerAdapter = new RecyclerAdapter(getApplicationContext(),pokelist);
+                    recyclerView.setLayoutManager(new GridLayoutManager(getApplicationContext(),3));
+                    recyclerView.setAdapter(recyclerAdapter);
+                }else
+                {
+                    recyclerAdapter.notifyDataSetChanged();
+                }
 
             }
 
             @Override
-            public void onResponse(Call call, Response response) throws IOException {
-
-                String result = response.body().string();
-                parseJson(result);
-                count++;
-                call(frontUrl,count);
-                MainActivity.this.runOnUiThread(new Runnable() {
-                    @Override
-                    public void run() {
-                        Log.d("size", String.valueOf(pokemonFronts.size()));
-                            if(pokemonFronts.size()<=1)
-                            {
-                                recyclerAdapter = new RecyclerAdapter(getApplicationContext(),pokemonFronts);
-                                recyclerView.setLayoutManager(new GridLayoutManager(getApplicationContext(),3));
-                                recyclerView.setAdapter(recyclerAdapter);
-                            }else
-                            {
-                                recyclerAdapter.notifyDataSetChanged();
-                            }
-
-
-
-                    }
-                });
+            public void onFailure(retrofit2.Call<MyPojo> call, Throwable t) {
+                Log.d("off", t.toString());
             }
         });
+
     }
 
-
-    public void parseJson(String s)
-    {
-        try {
-            JSONObject root = new JSONObject(s);
-            int id = root.getInt("id");
-            JSONObject pokemon = root.getJSONObject("pokemon");
-            String name =pokemon.getString("name");
-            String url = pokemon.getString("url");
-            String image = root.getJSONObject("sprites").getString("front_default");
-            PokemonFront pokFront = new PokemonFront(name,url,id,image);
-            pokemonFronts.add(pokFront);
-
-        } catch (JSONException e) {
-            e.printStackTrace();
-        }
-    }
 }
